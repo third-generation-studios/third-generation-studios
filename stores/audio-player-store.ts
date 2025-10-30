@@ -1,7 +1,8 @@
 "use client";
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase/client";
-import { TrackWithRelations } from "@/lib/types/database";
+import type { TrackWithRelations } from "@/lib/types/database";
+import { getSignedTrackUrl } from "@/lib/utils";
 
 type AudioPlayerState = {
     // state
@@ -9,20 +10,17 @@ type AudioPlayerState = {
     currentTrackId: string | null;
     isPlaying: boolean;
     showPlayer: boolean;
-
     currentTime: number;
     duration: number;
-
     volume: number;
     muted: boolean;
-
     isLoading: boolean;
     canPlay: boolean;
-
     playlist: TrackWithRelations[];
     currentTrackIndex: number;
     hasNextTrack: boolean;
     hasPreviousTrack: boolean;
+    recentlyPlayed: TrackWithRelations[];
 
     // actions
     playTrack: (track: TrackWithRelations, newPlaylist?: TrackWithRelations[]) => Promise<void>;
@@ -31,15 +29,14 @@ type AudioPlayerState = {
     closePlayer: () => void;
     playNextTrack: () => void;
     playPreviousTrack: () => void;
-
     seekTo: (time: number) => void;
     setVolume: (v: number) => void;
     toggleMute: () => void;
 };
 
 export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
-    // --- changed: lazy client-only audio initialization ---
     let audio: HTMLAudioElement | null = null;
+
     const initAudio = () => {
         if (audio || typeof window === "undefined") return;
         audio = new Audio();
@@ -54,37 +51,21 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
         });
 
         audio.addEventListener("loadedmetadata", () => {
-            set({ duration: typeof audio?.duration === "number" && !isNaN(audio.duration) ? audio.duration : 0 });
+            set({ duration: !isNaN(audio?.duration || 0) ? audio!.duration : 0 });
         });
 
-        audio.addEventListener("canplay", () => {
-            set({ canPlay: true, isLoading: false });
-        });
-
-        audio.addEventListener("waiting", () => {
-            set({ isLoading: true });
-        });
-
-        audio.addEventListener("playing", () => {
-            set({ isLoading: false });
-        });
-
-        audio.addEventListener("error", () => {
-            set({
-                isLoading: false,
-                canPlay: false,
-                isPlaying: false,
-            });
-        });
+        audio.addEventListener("canplay", () => set({ canPlay: true, isLoading: false }));
+        audio.addEventListener("waiting", () => set({ isLoading: true }));
+        audio.addEventListener("playing", () => set({ isLoading: false }));
+        audio.addEventListener("error", () => set({ isLoading: false, canPlay: false, isPlaying: false }));
     };
-    // --- end changed ---
 
-    // helper to update navigation flags
     const updateNavFlags = () => {
         const { playlist, currentTrackIndex } = get();
-        const hasNext = currentTrackIndex >= 0 && currentTrackIndex < playlist.length - 1;
-        const hasPrev = currentTrackIndex > 0 && playlist.length > 0;
-        set({ hasNextTrack: hasNext, hasPreviousTrack: hasPrev });
+        set({
+            hasNextTrack: currentTrackIndex >= 0 && currentTrackIndex < playlist.length - 1,
+            hasPreviousTrack: currentTrackIndex > 0 && playlist.length > 0,
+        });
     };
 
     return {
@@ -93,13 +74,12 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
         currentTrackId: null,
         isPlaying: false,
         showPlayer: false,
+        recentlyPlayed: [],
 
         currentTime: 0,
         duration: 0,
-
         volume: 1,
         muted: false,
-
         isLoading: false,
         canPlay: false,
 
@@ -108,18 +88,23 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
         hasNextTrack: false,
         hasPreviousTrack: false,
 
-        // actions
+        // --- MAIN ACTION: playTrack ---
         playTrack: async (track, newPlaylist) => {
             if (!track) return;
-            try {
-                // ensure audio exists on client
-                initAudio();
-                if (!audio) {
-                    console.warn("Audio not available (server environment).");
-                    set({ isPlaying: false, isLoading: false, canPlay: false });
-                    return;
-                }
 
+            initAudio();
+            if (!audio) {
+                console.warn("Audio not available (server environment).");
+                return;
+            }
+
+            // --- ✅ Update recently played list (top, unique, max 10) ---
+            const { recentlyPlayed } = get();
+            const updatedHistory = [track, ...recentlyPlayed.filter((t) => t.id !== track.id)].slice(0, 10);
+            set({ recentlyPlayed: updatedHistory });
+
+            try {
+                // Update playlist context
                 if (newPlaylist) {
                     set({
                         playlist: newPlaylist,
@@ -134,12 +119,10 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
                     if (idx >= 0) {
                         set({ currentTrackIndex: idx });
                     } else {
-                        // replace playlist with single track
                         set({ playlist: [track], currentTrackIndex: 0 });
                     }
                 }
 
-                // update computed nav flags
                 updateNavFlags();
 
                 set({
@@ -152,12 +135,13 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
                     currentTime: 0,
                     duration: 0,
                 });
+                if (!track.url) throw new Error("No audio URL available for this track");
 
-                if (!track.url) {
-                    throw new Error("No audio URL available for this track");
-                }
+                // Use getSignedTrackUrl to get fresh signed URL
+                const signedUrl = await getSignedTrackUrl(track.url);
+                if (!signedUrl) throw new Error("Failed to load track audio");
 
-                audio.src = track.url;
+                audio.src = signedUrl;
                 audio.currentTime = 0;
 
                 await audio
@@ -165,16 +149,13 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
                     .then(async () => {
                         set({ isPlaying: true, isLoading: false, canPlay: true });
 
-                        // Increment track plays after successful play start
+                        // ✅ Increment track plays in Supabase
                         try {
                             console.log(`Incrementing plays for track: ${track.id}`);
-                            const result = await supabase.rpc("increment_track_play", { track_id: track.id });
-                            console.log("RPC result:", result);
-                            if (result.error) {
-                                console.error("RPC error:", result.error);
-                            } else {
-                                console.log("Track plays incremented successfully");
-                            }
+                            const { error } = await supabase.rpc("increment_track_play", {
+                                track_id: track.id,
+                            });
+                            if (error) console.error("RPC error:", error);
                         } catch (err) {
                             console.error("Error incrementing track plays:", err);
                         }
@@ -193,8 +174,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
             const { playlist, currentTrackIndex } = get();
             const nextIdx = currentTrackIndex + 1;
             if (nextIdx >= 0 && nextIdx < playlist.length) {
-                const next = playlist[nextIdx];
-                if (next) void get().playTrack(next);
+                void get().playTrack(playlist[nextIdx]);
             }
         },
 
@@ -202,8 +182,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
             const { playlist, currentTrackIndex } = get();
             const prevIdx = currentTrackIndex - 1;
             if (prevIdx >= 0 && prevIdx < playlist.length) {
-                const prev = playlist[prevIdx];
-                if (prev) void get().playTrack(prev);
+                void get().playTrack(playlist[prevIdx]);
             }
         },
 
@@ -211,12 +190,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
             const { currentTrack, canPlay } = get();
             if (!currentTrack) return;
             initAudio();
-            if (!audio) {
-                // cannot resume on server
-                void get().playTrack(currentTrack);
-                return;
-            }
-            if (!audio.src || !canPlay) {
+            if (!audio || !audio.src || !canPlay) {
                 void get().playTrack(currentTrack);
                 return;
             }
@@ -262,13 +236,9 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set, get) => {
 
         seekTo: (time) => {
             initAudio();
-            try {
-                if (audio) {
-                    audio.currentTime = Math.max(0, Math.min(time, get().duration || time));
-                    set({ currentTime: audio.currentTime });
-                }
-            } catch {
-                // ignore
+            if (audio) {
+                audio.currentTime = Math.max(0, Math.min(time, get().duration || time));
+                set({ currentTime: audio.currentTime });
             }
         },
 

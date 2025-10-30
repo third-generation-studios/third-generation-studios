@@ -7,7 +7,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-function LoadingScreen({ message }: { message: string }) {
+// Define component interface
+interface LoadingScreenProps {
+    message: string;
+}
+
+// Extract LoadingScreen component with proper typing
+function LoadingScreen({ message }: LoadingScreenProps) {
     return (
         <div className="text-white flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -18,6 +24,7 @@ function LoadingScreen({ message }: { message: string }) {
     );
 }
 
+// Main page component with explicit NextPage typing
 export default function SoloQProfilePage() {
     const { user, loading } = useAuthStore();
     const { data: profile, isLoading: profileLoading } = useProfileByIdQuery(user?.id ?? "");

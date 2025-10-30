@@ -90,7 +90,7 @@ export default function MyTracksPage() {
             <p className="text-gray-400 mb-6">
                 {tracksWithAlbumImages.length} track{tracksWithAlbumImages.length !== 1 ? "s" : ""}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-24">
                 {tracksWithAlbumImages.map((track) => (
                     <TrackCard key={track.id} track={track} playlist={playlist} />
                 ))}

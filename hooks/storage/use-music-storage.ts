@@ -7,23 +7,9 @@ import { QUERY_KEYS } from "@/lib/fetchers/query-keys";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/types/supabase-types";
 
-// Use Supabase generated types
-type Artist = Database["public"]["Tables"]["profiles"]["Row"];
-type Album = Database["public"]["Tables"]["albums"]["Row"];
-type Track = Database["public"]["Tables"]["tracks"]["Row"];
-type AlbumImage = Database["public"]["Tables"]["album_images"]["Row"];
-
 // Insert types
-type ArtistInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 type AlbumInsert = Database["public"]["Tables"]["albums"]["Insert"];
 type TrackInsert = Database["public"]["Tables"]["tracks"]["Insert"];
-type AlbumImageInsert = Database["public"]["Tables"]["album_images"]["Insert"];
-
-// Update types
-type ArtistUpdate = Database["public"]["Tables"]["profiles"]["Update"];
-type AlbumUpdate = Database["public"]["Tables"]["albums"]["Update"];
-type TrackUpdate = Database["public"]["Tables"]["tracks"]["Update"];
-type AlbumImageUpdate = Database["public"]["Tables"]["album_images"]["Update"];
 
 // -------------------------
 // ARTISTS
@@ -238,6 +224,7 @@ export function useTrackUpload() {
                 duration,
                 plays: 0,
                 locked: false,
+                url_refreshed_at: new Date().toISOString(),
             });
 
             // Upload track image if provided (for singles)

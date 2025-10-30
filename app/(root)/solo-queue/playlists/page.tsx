@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAllPlaylists } from "@/hooks/music/use-playlists";
 import { PlayCircle, Music } from "lucide-react";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 // Resolve cover strictly from the first track album image using new structure
 function getPlaylistCoverUrl(playlist: any): string | undefined {
@@ -14,9 +15,17 @@ function getPlaylistCoverUrl(playlist: any): string | undefined {
     return track?.albums?.album_images?.[0]?.url || track?.album?.images?.[0]?.url;
 }
 
+// Main page component
 export default function PlaylistsPage() {
     const { data, isLoading, isError, refetch } = useAllPlaylists();
-    const playlists = data ?? [];
+    const [playlists, setPlaylists] = useState<any[]>([]);
+
+    // Use effect to update state when data changes
+    useEffect(() => {
+        if (data) {
+            setPlaylists(data);
+        }
+    }, [data]);
 
     return (
         <div>

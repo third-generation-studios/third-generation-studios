@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Home, Search, Heart, PlayCircle, User, Music, Upload, LogOut } from "lucide-react";
+import { Menu, X, Home, Search, Heart, PlayCircle, User, Music, Upload, LogOut, HomeIcon } from "lucide-react";
 import SidebarSection from "./sidebar-section";
 import PlaylistSidebarSection from "./playlist-sidebar-section";
 import { useAuthStore } from "@/stores/auth-store";
@@ -25,7 +25,10 @@ const artistItems = [
     { icon: Upload, label: "Upload Track", href: "/solo-queue/studio/upload" },
 ];
 
-const userItems = [{ icon: User, label: "Profile", href: "/solo-queue/profile" }];
+const userItems = [
+    { icon: User, label: "Profile", href: "/solo-queue/profile" },
+    { icon: HomeIcon, label: "Back To Third Generation Studios", href: "/" },
+];
 
 interface ISidebarProps {
     isCollapsed: boolean;

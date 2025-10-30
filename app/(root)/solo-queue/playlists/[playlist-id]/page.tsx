@@ -2,12 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { PlayCircle, Music, Trash2, Pencil, Check, X, Loader2, Ellipsis } from "lucide-react";
-import { use, useEffect, useRef, useState } from "react";
+import { PlayCircle, Music, Pencil, Check, X, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import { usePlaylist, useDeletePlaylist, useUpdatePlaylist, useRemoveTrackFromPlaylist, PlaylistTrack } from "@/hooks/music/use-playlists";
-import { useArtist } from "@/hooks/music/use-artists";
 import { useModalStore } from "@/stores/modal-store";
 import { useAudioPlayerStore } from "@/stores/audio-player-store";
 import { PlaylistTrackWithRelations } from "@/lib/fetchers/playlist-fetchers";

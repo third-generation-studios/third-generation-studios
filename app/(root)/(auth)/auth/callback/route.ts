@@ -1,34 +1,54 @@
-import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
-// The client you created from the Server-Side Auth instructions
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get("code")
-  // if "next" is in param, use it as the redirect URL
-  let next = searchParams.get("next") ?? "/"
-  if (!next.startsWith("/")) {
-    // if "next" is not a relative URL, use the default
-    next = "/"
-  }
+    const { searchParams, origin } = new URL(request.url);
+    const type = searchParams.get("type");
+    const token_hash = searchParams.get("token_hash");
+    const code = searchParams.get("code");
 
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      const forwardedHost = request.headers.get("x-forwarded-host") // original origin before load balancer
-      const isLocalEnv = process.env.NODE_ENV === "development"
-      if (isLocalEnv) {
-        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
+    const supabase = await createClient();
+
+    try {
+        // 🔹 Handle password recovery first
+        if (type === "recovery" && token_hash) {
+            const { error } = await supabase.auth.verifyOtp({
+                type: "recovery",
+                token_hash,
+            });
+
+            if (error) {
+                return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(error.message)}`);
+            }
+
+            // Persist the token in a temporary cookie for reset page
+            const response = NextResponse.redirect(`${origin}/reset-password`);
+            response.cookies.set("recovery_token", token_hash, {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/reset-password",
+                maxAge: 60 * 5, // 5 minutes
+            });
+
+            return response;
+        }
+
+        // 🔹 Handle OAuth / magic link login
+        if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) {
+                console.error("Exchange code error:", error.message);
+                return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(error.message)}`);
+            }
+
+            // Redirect to home page after login
+            return NextResponse.redirect(`${origin}/`);
+        }
+
+        // Fallback if no valid params
+        return NextResponse.redirect(`${origin}/auth/auth-code-error?error=missing_params`);
+    } catch (err: any) {
+        console.error("Unexpected callback error:", err);
+        return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(err.message || "unexpected_error")}`);
     }
-  }
-
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }

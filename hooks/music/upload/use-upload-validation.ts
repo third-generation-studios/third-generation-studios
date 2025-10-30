@@ -38,6 +38,7 @@ export const useUploadValidation = () => {
             if (!t.type || t.type.trim() === "") errs.push(`Track ${i + 1}: track type is required.`);
         });
 
+        // Album Validations
         if (albumData.type === "Album") {
             if (!albumData.name.trim()) errs.push("Album name is required.");
 

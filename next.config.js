@@ -32,6 +32,7 @@ const nextConfig = {
         RESEND_AUDIENCE_ID: process.env.RESEND_AUDIENCE_ID,
         SPOTIFY_CLIENT_SECRET: process.env.SPOTIFY_CLIENT_SECRET,
         ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     },
     productionBrowserSourceMaps: false,
 

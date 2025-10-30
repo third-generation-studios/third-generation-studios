@@ -2,18 +2,21 @@
 
 import React from "react";
 import { useUploadFormStore } from "@/stores/upload-form-store";
-import { UploadMode } from "@/lib/types/database";
+import { AlbumType, UploadMode } from "@/lib/types/database";
 
-export default function UploadModeTabs() {
+export default function UploadModeTabs({
+    selectedType,
+    setSelectedType,
+}: {
+    selectedType: AlbumType;
+    setSelectedType: (type: AlbumType) => void;
+}) {
     const { albumData } = useUploadFormStore();
-    const setAlbumData = useUploadFormStore((state) => state.setAlbumData);
 
     // Track selected tab independently from albumData.type
-    const [selectedTab, setSelectedTab] = React.useState<"Album" | "Single" | "Remix">(albumData.type === "Album" ? "Album" : "Single");
 
-    const handleAlbumTypeChange = (type: "Album" | "Single" | "Remix") => {
-        setSelectedTab(type);
-        setAlbumData({ type: type === "Remix" ? "Single" : type });
+    const handleAlbumTypeChange = (type: AlbumType) => {
+        setSelectedType(type);
     };
 
     return (
@@ -28,7 +31,7 @@ export default function UploadModeTabs() {
                         key={tab.value}
                         onClick={() => handleAlbumTypeChange(tab.value as "Album" | "Single" | "Remix")}
                         className={`py-2.5 transition-colors duration-200 ${
-                            selectedTab === tab.value
+                            selectedType === tab.value
                                 ? "bg-neutral-800 text-white"
                                 : "text-neutral-400 hover:text-white hover:bg-neutral-800/40"
                         }`}

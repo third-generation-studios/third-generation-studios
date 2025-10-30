@@ -2,18 +2,18 @@
 
 import Image from "next/image";
 import React, { useMemo } from "react";
-import { useRouter } from "next/navigation";
-import ExternalLinkButton from "../external-link-button";
+import { usePathname } from "next/navigation";
 import PlayPauseButton from "./play-pause-button";
 import TrackInfo from "./track-info";
 import LockButton from "./lock-button";
 import TypeLabel from "./type-label";
 import LikeButton from "../../../ui/buttons/like-button";
 import { useAuthStore } from "@/stores/auth-store";
-import { useProfile } from "@/hooks/public/use-profiles";
 import AddToPlaylistButton from "../../../ui/buttons/add-to-playlist/playlist-button";
 import RemixCard from "./remix-card";
 import { TrackWithRelations } from "@/lib/types/database";
+import DeleteButton from "./delete-button";
+import ExternalLinkButton from "../external-link-button";
 
 interface ITrackCardProps {
     track: TrackWithRelations;
@@ -23,8 +23,7 @@ interface ITrackCardProps {
 
 const TrackCard = ({ track, playlist = [], onUnlock }: ITrackCardProps) => {
     const { user } = useAuthStore();
-    const { data: profile } = useProfile(user?.id || "", !!user?.id);
-    const router = useRouter();
+    const pathname = usePathname();
 
     // Compute album cover safely - moved outside the conditional
     const albumCover = useMemo(() => {
@@ -39,9 +38,6 @@ const TrackCard = ({ track, playlist = [], onUnlock }: ITrackCardProps) => {
         // Pass the first remix relation (or adjust as needed)
         return <RemixCard track={track} remixData={track.remixes[0]} onUnlock={onUnlock} />;
     }
-
-    // Use album from track for external link
-    const album = track.album;
 
     return (
         <div className="group bg-gray-900/80 rounded-2xl shadow-lg overflow-hidden hover:scale-105 hover:shadow-2xl transition-all duration-300 relative flex flex-col">
@@ -97,12 +93,13 @@ const TrackCard = ({ track, playlist = [], onUnlock }: ITrackCardProps) => {
                         <AddToPlaylistButton trackId={track.id} />
                     </div>
                 )}
+                {user && user.id === track.artist_id && pathname === "/solo-queue/studio/my-tracks" && <DeleteButton track={track} />}
 
                 {/* External Links */}
-                {/* {track.type === "Released" && album?.name && (
+                {/* {track.album?.type === "Remix" && (
                     <ExternalLinkButton
-                        albumName={album.name}
-                        link={`https://album.link/tgs-${album.name.toLowerCase().replace(/\s+/g, "-")}`}
+                        albumName={track.album.name}
+                        link={track.album.}
                     />
                 )} */}
             </div>

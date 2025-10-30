@@ -49,7 +49,6 @@ export default function ResetPasswordForm() {
             setFormError(null);
             setSuccessMessage(null);
 
-            // Client-side validation
             if (!password.trim() || !confirmPassword.trim()) {
                 setFormError("Both password fields are required.");
                 return;
@@ -70,19 +69,13 @@ export default function ResetPasswordForm() {
             setIsSubmitting(true);
 
             try {
-                // Update the user's password - this works because Supabase automatically
-                // handles the session from the reset link
-                const { error } = await supabase.auth.updateUser({
-                    password: password.trim(),
-                });
+                // ✅ Use the token for password recovery
+                const { error } = await supabase.auth.updateUser({ password: password.trim() });
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
                 setSuccessMessage("Password updated successfully!");
 
-                // Redirect to sign in after a brief delay
                 setTimeout(() => {
                     router.push("/sign-in?message=Password updated successfully");
                 }, 2000);
@@ -90,7 +83,7 @@ export default function ResetPasswordForm() {
                 console.error("Reset password error:", error);
 
                 if (error.message?.includes("session")) {
-                    setFormError("Session expired. Please request a new password reset link.");
+                    setFormError("Session expired or invalid. Please request a new password reset link.");
                 } else if (error.message?.includes("weak")) {
                     setFormError("Password is too weak. Please choose a stronger password.");
                 } else if (error.message?.includes("same")) {

@@ -1,6 +1,6 @@
 import { useProfileByIdQuery } from "@/hooks/public/use-profiles";
 import { useAuthStore } from "@/stores/auth-store";
-import { Laptop, LogOut, Moon, Sun, User } from "lucide-react";
+import { Laptop, LogOut, Moon, Music, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef } from "react";
@@ -121,7 +121,7 @@ const UserIconMenu = (props: IUserIconMenuProps) => {
                     <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{user.email}</span>
                 </div>
             </div>
-
+            {/* Profile */}
             <div className="flex flex-col px-1 py-1">
                 <button
                     role="menuitem"
@@ -138,7 +138,26 @@ const UserIconMenu = (props: IUserIconMenuProps) => {
                 >
                     <User className="mr-1" size={16} aria-hidden="true" /> Profile
                 </button>
+                {/* Divider */}
+                <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
 
+                {/* Solo Queue */}
+                <button
+                    role="menuitem"
+                    tabIndex={0}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md text-black hover:text-white hover:bg-green-400 dark:hover:bg-green-950 dark:text-white cursor-pointer transition-colors duration-150 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    onClick={() => {
+                        closeMenu();
+                        router.push("/solo-queue");
+                    }}
+                    onKeyDown={onActivate(() => {
+                        closeMenu();
+                        router.push("/solo-queue");
+                    })}
+                >
+                    <Music className="mr-1" size={16} aria-hidden="true" /> Solo Queue
+                </button>
+                {/* Divider */}
                 <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
 
                 {/* <div className="px-3 py-2">

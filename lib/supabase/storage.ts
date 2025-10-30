@@ -8,7 +8,7 @@ interface UploadOptions {
     bucket: BucketName;
     file: File | Blob;
     path?: string; // optional custom path
-    userId?: string; // for structured paths
+    userId: string; // for structured paths
     albumName?: string; // for album-based organization
     trackName?: string; // for track-specific naming
     onUploadProgress?: (progress: number) => void;
@@ -32,24 +32,25 @@ export async function uploadFile({
     let fileName: string;
     let filePath: string;
 
-    if (bucket === "track-urls" && userId && albumName && trackName) {
+    if (bucket === "track-urls") {
+        if (!albumName || !trackName) throw new Error("albumName and trackName are required for track upload");
+
         const sanitizedAlbum = albumName.replace(/[^a-zA-Z0-9\-_\s]/g, "").replace(/\s+/g, "-");
         const sanitizedTrack = trackName.replace(/[^a-zA-Z0-9\-_\s]/g, "").replace(/\s+/g, "-");
         const uniqueId = uuidv4().split("-")[0];
         fileName = `${sanitizedTrack}-${uniqueId}.${fileExt}`;
-        filePath = `${userId}/${sanitizedAlbum}/${fileName}`; // <-- add userId here
+        filePath = `${userId}/${sanitizedAlbum}/${fileName}`;
     } else {
-        // Default behavior for other buckets
         fileName = `${uuidv4()}.${fileExt}`;
         filePath = path || (userId ? `${userId}/${fileName}` : fileName);
     }
 
-    // If progress callback is provided, simulate progress
+    // Simulate progress if callback provided
     if (onUploadProgress) {
         let simulated = 0;
         const interval = setInterval(() => {
-            simulated += Math.random() * 5; // increment 0-5%
-            if (simulated >= 95) simulated = 95; // cap at 95%
+            simulated += Math.random() * 5;
+            if (simulated >= 95) simulated = 95;
             onUploadProgress(Math.round(simulated));
         }, 200);
 
@@ -61,14 +62,21 @@ export async function uploadFile({
             return null;
         }
 
-        onUploadProgress(100); // mark complete
-        return getPublicUrl(bucket, filePath);
+        onUploadProgress(100);
     } else {
         const { error } = await supabase.storage.from(bucket).upload(filePath, file);
         if (error) {
             console.error("Error uploading file:", error.message);
             return null;
         }
+    }
+
+    // Return appropriate URL / path
+    if (bucket === "track-urls") {
+        // For private bucket, return the path to generate signed URL later
+        return filePath;
+    } else {
+        // Public bucket, return URL directly
         return getPublicUrl(bucket, filePath);
     }
 }

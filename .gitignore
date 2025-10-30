@@ -134,3 +134,6 @@ dist
 
 next-env.d.ts
 .vercel
+
+# Scripts
+/scripts

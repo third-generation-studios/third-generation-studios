@@ -10,9 +10,9 @@ import { useModalStore } from "@/stores/modal-store";
 import { Button } from "@/components/ui/buttons/button";
 import { useCreateAlbumWithImages, useUpdateAlbum, useAlbumImageManagement } from "@/hooks/music/use-albums";
 import { useAuthStore } from "@/stores/auth-store";
-import { useCreateTrackCredit, useUpdateTrackCredit } from "@/hooks/music/use-track-credits";
+import { useCreateTrackCredit } from "@/hooks/music/use-track-credits";
 import { fetchAlbumsByArtist } from "@/lib/fetchers/album-fetchers";
-import { TrackUploadData, TrackWithRelations } from "@/lib/types/database";
+import { AlbumType, TrackUploadData, TrackWithRelations, UploadMode } from "@/lib/types/database";
 import MiniTrackCard from "../mini-track-card";
 import { useTrackUpload } from "@/hooks/storage/use-music-storage";
 import { useUpdateTrack, useCreateTrack } from "@/hooks/music/use-tracks";
@@ -26,11 +26,12 @@ export default function AlbumUploadUpdateForm() {
     const [uploadingTracks, setUploadingTracks] = useState<TrackUploadData[]>([]);
     const [finishedTracks, setFinishedTracks] = useState<TrackUploadData[]>([]);
     const [failedTracks, setFailedTracks] = useState<TrackUploadData[]>([]);
+    const [selectedType, setSelectedType] = React.useState<AlbumType>("Single");
     const [trackProgress, setTrackProgress] = useState<Record<string, number>>({});
 
     // Store and auth hooks
     const { user } = useAuthStore();
-    const { tracks, albumData, trackCreditData, isEditing } = useUploadFormStore();
+    const { tracks, albumData, trackCreditData, isEditing, setAlbumData } = useUploadFormStore();
     const openModal = useModalStore((state) => state.openModal);
     const closeModal = useModalStore((state) => state.closeModal);
 
@@ -40,11 +41,18 @@ export default function AlbumUploadUpdateForm() {
     const { updateImage: updateAlbumImage, addImage: addAlbumImage } = useAlbumImageManagement(albumData.album_id || "");
     const trackUpload = useTrackUpload();
     const updateTrackMutation = useUpdateTrack();
-    const createTrackMutation = useCreateTrack();
     const createTrackCreditMutation = useCreateTrackCredit();
-    const updateTrackCreditMutation = useUpdateTrackCredit();
 
     const userId = user?.id as string;
+
+    const handleAlbumTypeChange = (type: "Single" | "Album" | "Remix") => {
+        setSelectedType(type);
+
+        // ✅ Only update Zustand if changed
+        if (albumData.type !== type) {
+            setAlbumData({ type }); // This merges into albumData in your store
+        }
+    };
 
     // Main upload handler (INSERT mode)
     const handleUploadSubmit = async (data: any) => {
@@ -586,7 +594,7 @@ export default function AlbumUploadUpdateForm() {
                 className="max-w-2xl mx-auto space-y-6 bg-neutral-950/50 border border-neutral-800 rounded-2xl p-6 shadow-xl"
             >
                 {/* Upload mode tabs */}
-                {isEditing ? null : <UploadModeTabs />}
+                {isEditing ? null : <UploadModeTabs selectedType={selectedType} setSelectedType={handleAlbumTypeChange} />}
 
                 {/* Album/track details and track list */}
                 <AlbumDetailsForm />

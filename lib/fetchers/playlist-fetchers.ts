@@ -90,6 +90,7 @@ function shapePlaylist(data: RawPlaylistData): PlaylistWithRelations {
                     artist_id: t.track.artist_id,
                     title: t.track.title,
                     url: t.track.url,
+                    url_refreshed_at: t.track.url_refreshed_at,
                     duration: t.track.duration,
                     release_date: t.track.release_date,
                     genre: t.track.genre,

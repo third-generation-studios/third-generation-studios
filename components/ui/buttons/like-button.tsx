@@ -2,6 +2,7 @@ import { Heart } from "lucide-react";
 import React from "react";
 import { useToggleTrackLike, useUserTrackLike } from "@/hooks/music/use-tracks";
 import { useAuthStore } from "@/stores/auth-store";
+import { redirect } from "next/navigation";
 
 interface ILikeButtonProps {
     trackId: string;
@@ -26,7 +27,7 @@ const LikeButton: React.FC<ILikeButtonProps> = ({ trackId, className = "", iconS
         if (!userId) {
             // Optional: Show login prompt or redirect to login
             console.warn("User must be logged in to like tracks");
-            return;
+            return redirect("/sign-in");
         }
         if (isLoading) return;
         try {
@@ -42,7 +43,7 @@ const LikeButton: React.FC<ILikeButtonProps> = ({ trackId, className = "", iconS
             <button
                 type="button"
                 aria-label="Login to like"
-                className={`text-2xl focus:outline-none opacity-60 cursor-not-allowed ${className}`}
+                className={`text-2xl focus:outline-none opacity-60 cursor-no-drop ${className}`}
                 title="Login to like tracks"
                 disabled
             >

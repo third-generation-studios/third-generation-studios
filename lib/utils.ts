@@ -18,3 +18,21 @@ export function formatDuration(duration?: number) {
     const s = totalSec % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
 }
+
+export async function getSignedTrackUrl(trackUrl: string): Promise<string | null> {
+    try {
+        const res = await fetch("/api/refresh-track-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trackUrl }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch signed URL");
+
+        return data.signedUrl;
+    } catch (error) {
+        console.error("Failed to get signed URL:", error);
+        return null;
+    }
+}

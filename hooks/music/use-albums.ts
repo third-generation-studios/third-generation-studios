@@ -15,7 +15,6 @@ import {
     fetchAlbumsWithoutImages,
     createAlbum,
     updateAlbum,
-    deleteAlbum,
     createAlbumWithImages,
     addAlbumImage,
     updateAlbumImage,
@@ -28,6 +27,7 @@ import {
     type AlbumImageInsert,
 } from "@/lib/fetchers/album-fetchers";
 import { uploadFile } from "@/lib/supabase/storage";
+import { supabase } from "@/lib/supabase/client";
 
 // Types
 export type { Album, AlbumInsert, AlbumUpdate, AlbumImage, AlbumImageInsert };
@@ -276,13 +276,22 @@ export function useDeleteAlbum() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => deleteAlbum(id),
-        onSuccess: (_, deletedId) => {
-            // Remove album from cache
-            queryClient.removeQueries({ queryKey: albumKeys.detail(deletedId) });
+        mutationFn: async (albumId: string) => {
+            const { error } = await supabase.from("albums").delete().eq("id", albumId);
 
-            // Invalidate all lists
+            if (error) throw error;
+            return albumId;
+        },
+        onSuccess: (deletedAlbumId) => {
+            // Invalidate all album queries
             queryClient.invalidateQueries({ queryKey: albumKeys.all });
+            queryClient.invalidateQueries({ queryKey: albumKeys.detail(deletedAlbumId) });
+            // Remove from cache
+            queryClient.removeQueries({ queryKey: albumKeys.detail(deletedAlbumId) });
+        },
+        onError: (error) => {
+            console.error("Failed to delete album:", error);
+            throw error;
         },
     });
 }
@@ -382,8 +391,8 @@ export function useSingles() {
     return useAlbumsByType("Single");
 }
 
-export function useEPs() {
-    return useAlbumsByType("EP");
+export function useRemixes() {
+    return useAlbumsByType("Remix");
 }
 
 export function useFullAlbums() {

@@ -30,6 +30,7 @@ export default function TrackListEditor() {
             locked: false,
             plays: 0,
             url: "",
+            url_refreshed_at: null,
             links: [],
             album_id: "",
             artist_id: "",
